@@ -160,6 +160,125 @@ namespace allocator
   {
     return false;
   }
+
+
+
+  // cCountedAllocator
+  // This is the same as the default allocator except that it counts the allocations/deallocations and constructions/destructions
+
+  template <class T>
+  class cCountedAllocator
+  {
+  public:
+    // Type definitions
+    typedef T        value_type;
+    typedef T*       pointer;
+    typedef const T* const_pointer;
+    typedef T&       reference;
+    typedef const T& const_reference;
+    typedef std::size_t    size_type;
+    typedef std::ptrdiff_t difference_type;
+
+    // Rebind allocator to type U
+    template <class U>
+    struct rebind
+    {
+      typedef cCountedAllocator<U> other;
+    };
+
+    // Return address of values
+    pointer address(reference value) const
+    {
+      return &value;
+    }
+    const_pointer address(const_reference value) const
+    {
+      return &value;
+    }
+
+    // Constructors and destructor
+    cCountedAllocator() throw() :
+      nAllocated(0),
+      nConstructed(0)
+    {
+    }
+    cCountedAllocator(const cCountedAllocator& rhs) throw() :
+      nAllocated(rhs.nAllocated),
+      nConstructed(rhs.nConstructed)
+    {
+    }
+    template <class U>
+    cCountedAllocator(const cCountedAllocator<U>& rhs) throw() :
+      nAllocated(rhs.nAllocated),
+      nConstructed(rhs.nConstructed)
+    {
+    }
+    ~cCountedAllocator()throw()
+    {
+      assert(nAllocated == 0);
+      assert(nConstructed == 0);
+    }
+
+    // Return maximum number of elements that can be allocated
+    size_type max_size() const throw()
+    {
+      return std::numeric_limits<std::size_t>::max() / sizeof(T);
+    }
+
+    // Allocate but don't initialize num elements of type T
+    pointer allocate(size_type num, const void* = nullptr)
+    {
+      // Print message and allocate memory with global new
+      std::cerr<<"allocate "<<num<<" element(s)"<<" of size "<<sizeof(T);
+      pointer ret = (pointer)(::operator new(num * sizeof(T)));
+      std::cerr<<" at: "<<(void*)ret<<std::endl;
+      nAllocated += num;
+      return ret;
+    }
+
+    // Deallocate storage p of deleted elements
+    void deallocate(pointer p, size_type num)
+    {
+      // Print message and deallocate memory with global delete
+      std::cerr<<"deallocate "<<num<<" element(s)"<<" of size "<<sizeof(T)<<" at: "<<(void*)p<<std::endl;
+      ::operator delete((void*)p);
+      nAllocated -= num;
+    }
+
+    // Initialize elements of allocated storage p with value value
+    void construct(pointer p, const T& value)
+    {
+      // Initialize memory with placement new
+      new((void*)p)T(value);
+      nConstructed++;
+    }
+
+    // Destroy elements of initialized storage p
+    void destroy(pointer p)
+    {
+      // Call the destructor of this object
+      p->~T();
+      assert(nConstructed != 0);
+      nConstructed--;
+    }
+    
+  private:
+    size_t nAllocated;
+    size_t nConstructed;
+  };
+
+  // Return that all specializations of this allocator are interchangeable
+  template <class T1, class T2>
+  bool operator==(const cCountedAllocator<T1>&, const cCountedAllocator<T2>&) throw()
+  {
+    return true;
+  }
+
+  template <class T1, class T2>
+  bool operator!=(const cCountedAllocator<T1>&, const cCountedAllocator<T2>&) throw()
+  {
+    return false;
+  }
 }
 
 class cPerson
@@ -186,41 +305,55 @@ cPerson::~cPerson()
   std::cout<<"cPerson Destroyed"<<std::endl;
 }
 
+template <typename T>
+void TestContainer(T& t)
+{
+  t.push_back(cPerson());
+  t.push_back(cPerson());
+  t.push_back(cPerson());
+}
+
 bool RunAllocatorTest()
 {
   // Normal memory allocation
   std::cout<<"Normal list memory allocation"<<std::endl;
   {
     std::list<cPerson> people;
-    people.push_back(cPerson());
-    people.push_back(cPerson());
-    people.push_back(cPerson());
+    TestContainer(people);
   }
   std::cout<<std::endl;
   std::cout<<"Normal vector memory allocation"<<std::endl;
   {
     std::vector<cPerson> people;
-    people.push_back(cPerson());
-    people.push_back(cPerson());
-    people.push_back(cPerson());
+    TestContainer(people);
   }
   std::cout<<std::endl;
 
-  // Custom allocator memory allocation
-  std::cout<<"Custom allocator list memory allocation"<<std::endl;
+  // Default allocator memory allocation
+  std::cout<<"Default allocator list memory allocation"<<std::endl;
   {
-    std::list<cPerson, allocator::cCustomAllocator<cPerson> > people;
-    people.push_back(cPerson());
-    people.push_back(cPerson());
-    people.push_back(cPerson());
+    std::list<cPerson, allocator::cDefaultAllocator<cPerson> > people;
+    TestContainer(people);
   }
   std::cout<<std::endl;
-  std::cout<<"Custom allocator vector memory allocation"<<std::endl;
+  std::cout<<"Default allocator vector memory allocation"<<std::endl;
   {
-    std::vector<cPerson, allocator::cCustomAllocator<cPerson> > people;
-    people.push_back(cPerson());
-    people.push_back(cPerson());
-    people.push_back(cPerson());
+    std::vector<cPerson, allocator::cDefaultAllocator<cPerson> > people;
+    TestContainer(people);
+  }
+  std::cout<<std::endl;
+
+  // Counted allocator memory allocation
+  std::cout<<"Counted allocator list memory allocation"<<std::endl;
+  {
+    std::list<cPerson, allocator::cCountedAllocator<cPerson> > people;
+    TestContainer(people);
+  }
+  std::cout<<std::endl;
+  std::cout<<"Counted allocator vector memory allocation"<<std::endl;
+  {
+    std::vector<cPerson, allocator::cCountedAllocator<cPerson> > people;
+    TestContainer(people);
   }
   std::cout<<std::endl;
 
