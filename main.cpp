@@ -57,11 +57,15 @@ typedef std::wostringstream ostringstream_t;
 
 
 
+// http://en.wikipedia.org/wiki/Allocator_%28C%2B%2B%29
 
 namespace allocator
 {
+  // cDefaultAllocator
+  // All this allocator does is call new and delete, this is the same behaviour as the default STL allocator.
+
   template <class T>
-  class cCustomAllocator
+  class cDefaultAllocator
   {
   public:
     // Type definitions
@@ -77,7 +81,7 @@ namespace allocator
     template <class U>
     struct rebind
     {
-      typedef cCustomAllocator<U> other;
+      typedef cDefaultAllocator<U> other;
     };
 
     // Return address of values
@@ -91,17 +95,17 @@ namespace allocator
     }
 
     // Constructors and destructor
-    cCustomAllocator() throw()
+    cDefaultAllocator() throw()
     {
     }
-    cCustomAllocator(const cCustomAllocator&) throw()
+    cDefaultAllocator(const cDefaultAllocator&) throw()
     {
     }
     template <class U>
-    cCustomAllocator(const cCustomAllocator<U>&) throw()
+    cDefaultAllocator(const cDefaultAllocator<U>&) throw()
     {
     }
-    ~cCustomAllocator()throw()
+    ~cDefaultAllocator()throw()
     {
     }
 
@@ -121,6 +125,14 @@ namespace allocator
       return ret;
     }
 
+    // Deallocate storage p of deleted elements
+    void deallocate(pointer p, size_type num)
+    {
+      // Print message and deallocate memory with global delete
+      std::cerr<<"deallocate "<<num<<" element(s)"<<" of size "<<sizeof(T)<<" at: "<<(void*)p<<std::endl;
+      ::operator delete((void*)p);
+    }
+
     // Initialize elements of allocated storage p with value value
     void construct(pointer p, const T& value)
     {
@@ -131,28 +143,20 @@ namespace allocator
     // Destroy elements of initialized storage p
     void destroy(pointer p)
     {
-      // Destroy objects by calling their destructor
+      // Call the destructor of this object
       p->~T();
-    }
-
-    // Deallocate storage p of deleted elements
-    void deallocate(pointer p, size_type num)
-    {
-      // Print message and deallocate memory with global delete
-      std::cerr<<"deallocate "<<num<<" element(s)"<<" of size "<<sizeof(T)<<" at: "<<(void*)p<<std::endl;
-      ::operator delete((void*)p);
     }
   };
 
   // Return that all specializations of this allocator are interchangeable
   template <class T1, class T2>
-  bool operator==(const cCustomAllocator<T1>&, const cCustomAllocator<T2>&) throw()
+  bool operator==(const cDefaultAllocator<T1>&, const cDefaultAllocator<T2>&) throw()
   {
     return true;
   }
 
   template <class T1, class T2>
-  bool operator!=(const cCustomAllocator<T1>&, const cCustomAllocator<T2>&) throw()
+  bool operator!=(const cDefaultAllocator<T1>&, const cDefaultAllocator<T2>&) throw()
   {
     return false;
   }
@@ -182,7 +186,7 @@ cPerson::~cPerson()
   std::cout<<"cPerson Destroyed"<<std::endl;
 }
 
-bool CustomAllocatorTest()
+bool RunAllocatorTest()
 {
   // Normal memory allocation
   std::cout<<"Normal list memory allocation"<<std::endl;
@@ -225,6 +229,6 @@ bool CustomAllocatorTest()
 
 int main(int argc, char** argv)
 {
-  return CustomAllocatorTest() ? EXIT_FAILURE : EXIT_SUCCESS;
+  return RunAllocatorTest() ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
