@@ -105,7 +105,7 @@ namespace allocator
     cDefaultAllocator(const cDefaultAllocator<U>&) throw()
     {
     }
-    ~cDefaultAllocator()throw()
+    ~cDefaultAllocator() throw()
     {
     }
 
@@ -213,7 +213,7 @@ namespace allocator
       nConstructed(rhs.nConstructed)
     {
     }
-    ~cCountedAllocator()throw()
+    ~cCountedAllocator() throw()
     {
       assert(nAllocated == 0);
       assert(nConstructed == 0);
@@ -261,7 +261,10 @@ namespace allocator
       assert(nConstructed != 0);
       nConstructed--;
     }
-    
+
+    size_t GetAllocatedCount() const { return nAllocated; }
+    size_t GetConstructedCount() const { return nConstructed; }
+
   private:
     size_t nAllocated;
     size_t nConstructed;
@@ -350,11 +353,31 @@ bool RunAllocatorTest()
     TestContainer(people);
   }
   std::cout<<std::endl;
-  std::cout<<"Counted allocator vector memory allocation"<<std::endl;
+
   {
-    std::vector<cPerson, allocator::cCountedAllocator<cPerson> > people;
-    TestContainer(people);
+    // This test may not work on every compiler as it relies on allocators having state.
+    // http://www.velocityreviews.com/forums/t280576-idea-for-custom-thread-safe-stl-allocator.html
+    std::cout<<"Counted allocator vector memory allocation"<<std::endl;
+    allocator::cCountedAllocator<cPerson> a;
+    {
+      std::vector<cPerson, allocator::cCountedAllocator<cPerson> > people0(a);
+      TestContainer(people0);
+
+      std::cout<<"Counted a="<<a.GetAllocatedCount()<<", c="<<a.GetConstructedCount()<<std::endl;
+      assert(a.GetConstructedCount() == 3);
+
+      std::vector<cPerson, allocator::cCountedAllocator<cPerson> > people1(a);
+      TestContainer(people1);
+
+      std::cout<<"Counted a="<<a.GetAllocatedCount()<<", c="<<a.GetConstructedCount()<<std::endl;
+      assert(a.GetConstructedCount() == 6);
+    }
+
+    std::cout<<"Counted a="<<a.GetAllocatedCount()<<", c="<<a.GetConstructedCount()<<std::endl;
+    assert(a.GetAllocatedCount() == 0);
+    assert(a.GetConstructedCount() == 0);
   }
+
   std::cout<<std::endl;
 
   return true;
