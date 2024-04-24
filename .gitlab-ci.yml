@@ -1,0 +1,23 @@
+stages:
+  - build
+  - test
+
+build:
+  stage: build
+  tags:
+    - linux
+    - cpp
+    - make
+  script:
+    - cmake .
+    - make
+  artifacts:
+    untracked: true
+
+unit-test:
+  stage: test
+  needs: [build]
+  tags:
+    - linux
+  script:
+    - ./allocator

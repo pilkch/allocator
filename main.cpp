@@ -318,6 +318,8 @@ void TestContainer(T& t)
 
 bool RunAllocatorTest()
 {
+  // TODO: Replace this with real googletest unit tests
+
   // Normal memory allocation
   std::cout<<"Normal list memory allocation"<<std::endl;
   {
